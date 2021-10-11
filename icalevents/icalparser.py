@@ -50,6 +50,7 @@ class Event:
         self.attendee = None
         self.organizer = None
         self.categories = None
+        self.floating = None
 
     def time_left(self, time=None):
         """
@@ -139,6 +140,7 @@ class Event:
         ne.created = self.created
         ne.last_modified = self.last_modified
         ne.categories = self.categories
+        ne.floating = self.floating
 
         return ne
 
@@ -152,7 +154,7 @@ def encode(value: Optional[vText]) -> Optional[str]:
         return str(value.encode('utf-8'))
 
 
-def create_event(component, tz=UTC):
+def create_event(component, utc_defautl, tz=UTC):
     """
     Create an event from its iCal representation.
 
@@ -164,6 +166,9 @@ def create_event(component, tz=UTC):
     event = Event()
 
     event.start = normalize(component.get('dtstart').dt, tz=tz)
+    # The RFC specifies that the TZID parameter must be specified for datetime or time
+    # Otherwise we set a default timezone (if only one is set with VTIMEZONE) or utc
+    event.floating = type(component.get('dtstart').dt) == date and utc_defautl
 
     if component.get('dtend'):
         event.end = normalize(component.get('dtend').dt, tz=tz)
@@ -203,7 +208,7 @@ def create_event(component, tz=UTC):
         event_class = component.get('class')
         event.private = event_class == 'PRIVATE' or event_class == 'CONFIDENTIAL'
 
-    if component.get('class'):
+    if component.get('transp'):
         event.transparent = component.get('transp') == 'TRANSPARENT'
 
     if component.get('created'):
@@ -312,13 +317,16 @@ def parse_events(content, start=None, end=None, default_span=timedelta(days=7)):
 
     # If there's exactly one timezone in the file,
     # assume it applies globally, otherwise UTC
+    utc_default = False
     if len(timezones) == 1:
         cal_tz = get_timezone(list(timezones)[0])
     else:
+        utc_default = True
         cal_tz = UTC
 
     start = normalize(start, cal_tz)
     end = normalize(end, cal_tz)
+
 
     found = []
     recurrence_ids = []
@@ -327,7 +335,7 @@ def parse_events(content, start=None, end=None, default_span=timedelta(days=7)):
     exceptions = {}
     for component in calendar.walk():
         if component.name == "VEVENT":
-            e = create_event(component, cal_tz)
+            e = create_event(component, utc_default, cal_tz)
             
             if 'RECURRENCE-ID' in component:
                 recurrence_ids.append((e.uid, component['RECURRENCE-ID'].dt, e.sequence))
