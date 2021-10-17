@@ -452,10 +452,14 @@ class ICalEventsTests(unittest.TestCase):
         self.assertEqual(e1.start.hour, 0, "check start of the day")
         self.assertEqual(e1.end.hour, 0, "check end of the day")
         self.assertEqual(e1.floating, False, "respect floating time")
-        self.assertEqual(e1.start.tzinfo, gettz('Europe/Zurich'), "check tz as specified in calendar")
+        self.assertEqual(
+            e1.start.tzinfo, gettz("Europe/Zurich"), "check tz as specified in calendar"
+        )
 
         self.assertEqual(e2.transparent, False, "respect transparency")
         self.assertEqual(e2.start.hour, 8, "check start of the day")
         self.assertEqual(e2.end.hour, 16, "check end of the day")
         self.assertEqual(e2.floating, False, "respect floating time")
-        self.assertEqual(e1.start.tzinfo, gettz('Europe/Zurich'), "check tz as specified in calendar")
+        self.assertEqual(
+            e1.start.tzinfo, gettz("Europe/Zurich"), "check tz as specified in calendar"
+        )
