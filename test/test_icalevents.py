@@ -1032,6 +1032,47 @@ class ICalEventsTests(unittest.TestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0].end.hour, 8)
 
+    def test_recurring_event_already_in_progress(self):
+        tz = gettz("Europe/Berlin")
+        events = icalevents.events(
+            file="test/test_data/recurring_small_window.ics",
+            start=datetime(2022, 1, 11, 7, 0, tzinfo=tz),
+            end=datetime(2022, 1, 11, 7, 15, tzinfo=tz),
+            strict=True,
+        )
+        self.assertEqual([(e.start.hour, e.end.hour) for e in events], [(0, 8)])
+
+    def test_recurring_event_finished_before_query_start(self):
+        tz = gettz("Europe/Berlin")
+        point = datetime(2022, 1, 11, 8, 0, 0, 1, tzinfo=tz)
+        events = icalevents.events(
+            file="test/test_data/recurring_small_window.ics",
+            start=point,
+            end=point,
+            strict=True,
+        )
+        self.assertEqual(events, [])
+
+    def test_multiday_recurrences_overlapping_a_point(self):
+        calendar = """BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:overlap
+DTSTART;VALUE=DATE:20250922
+DTEND;VALUE=DATE:20250925
+RRULE:FREQ=DAILY;COUNT=5
+EXDATE;VALUE=DATE:20250923
+END:VEVENT
+END:VCALENDAR"""
+        for hour in (0, 12):
+            point = datetime(2025, 9, 25, hour)
+            events = icalevents.events(
+                string_content=calendar, start=point, end=point, strict=True
+            )
+            self.assertEqual(
+                [e.start for e in events], [date(2025, 9, 24), date(2025, 9, 25)]
+            )
+
     def test_regression_offset_aware_comparison(self):
         ical = "test/test_data/regression_offset_native.ics"
         start = datetime(2020, 7, 1)
