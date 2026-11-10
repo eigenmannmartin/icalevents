@@ -407,6 +407,28 @@ class ICalEventsTests(unittest.TestCase):
         self.assertIsNone(events[2].created)
         self.assertIsNone(events[2].last_modified)
 
+    def test_repeated_categories_preserve_all_values(self):
+        calendar = """BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:categorized
+DTSTART;VALUE=DATE:20240201
+CATEGORIES:Work,Client Team
+CATEGORIES:Équipe
+END:VEVENT
+BEGIN:VEVENT
+UID:uncategorized
+DTSTART;VALUE=DATE:20240202
+END:VEVENT
+END:VCALENDAR"""
+        events = icalevents.events(
+            string_content=calendar, start=date(2024, 2, 1), end=date(2024, 2, 3)
+        )
+        self.assertEqual(
+            [(e.uid, e.categories) for e in events],
+            [("categorized", ["Work", "Client Team", "Équipe"]), ("uncategorized", [])],
+        )
+
     def test_event_categories(self):
         ical = "test/test_data/categories_test.ics"
         start = date(2020, 11, 10)
