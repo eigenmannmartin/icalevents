@@ -384,6 +384,8 @@ def parse_events(
                         start.day,
                         start.hour,
                         start.minute,
+                        start.second,
+                        start.microsecond,
                         tzinfo=e.start.tzinfo,
                     )
                     if type(start) == datetime
@@ -398,6 +400,8 @@ def parse_events(
                         end.day,
                         end.hour,
                         end.minute,
+                        end.second,
+                        end.microsecond,
                         tzinfo=e.start.tzinfo,
                     )
                     if type(end) == datetime
@@ -405,26 +409,30 @@ def parse_events(
                 )
             else:
                 f = (
-                    datetime(
-                        start.year, start.month, start.day, start.hour, start.minute
-                    )
+                    start.replace(tzinfo=None)
                     if type(start) == datetime
                     else datetime(start.year, start.month, start.day)
                 )
                 t = (
-                    datetime(end.year, end.month, end.day, end.hour, end.minute)
+                    end.replace(tzinfo=None)
                     if type(end) == datetime
                     else datetime(end.year, end.month, end.day)
                 )
 
             if e.recurring:
                 rule = parse_rrule(component)
-                # We can not use rule.between because the event has to fit in between https://github.com/jazzband/icalevents/issues/101
-                for dt in [
-                    dt
-                    for dt in list(rule.between(f - (end - start), t + (end - start)))
-                    if dt >= f and dt <= t
-                ]:
+                duration = e.end - e.start
+                # A DATE event without DTEND occupies its whole start day.
+                if e.all_day and not duration:
+                    duration = timedelta(days=1)
+                try:
+                    earliest_start = f - duration
+                except OverflowError:
+                    earliest_start = datetime.min.replace(tzinfo=f.tzinfo)
+                for dt in rule.between(earliest_start, t, inc=True):
+                    # All-day DTEND is exclusive.
+                    if e.all_day and dt + duration == f:
+                        continue
                     # Recompute the start time in the current timezone *on* the
                     # date of *this* occurrence. This handles the case where the
                     # recurrence has crossed over the daylight savings time boundary.
