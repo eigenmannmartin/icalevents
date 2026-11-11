@@ -11,6 +11,33 @@ from icalendar.prop import vText
 
 
 class ICalEventsTests(unittest.TestCase):
+    def test_all_day_event_end_boundary(self):
+        content = """BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:multi-day
+DTSTART;VALUE=DATE:20251211
+DTEND;VALUE=DATE:20251213
+END:VEVENT
+BEGIN:VEVENT
+UID:implicit-end
+DTSTART;VALUE=DATE:20251213
+END:VEVENT
+END:VCALENDAR"""
+        cases = [
+            (11, ["multi-day"]),
+            (12, ["multi-day"]),
+            (13, ["implicit-end"]),
+            (14, []),
+        ]
+        for day, expected in cases:
+            with self.subTest(day=day):
+                query = date(2025, 12, day)
+                events = icalevents.events(
+                    string_content=content, start=query, end=query
+                )
+                self.assertEqual([event.uid for event in events], expected)
+
     @pook.on
     def test_events_url_without_content_type(self):
         url = "https://raw.githubusercontent.com/jazzband/icalevents/master/test/test_data/basic.ics"
@@ -24,7 +51,7 @@ class ICalEventsTests(unittest.TestCase):
             response_body=body,
         )
 
-        start = date(2017, 5, 18)
+        start = date(2017, 5, 17)
         end = date(2017, 5, 19)
 
         events = icalevents.events(url=url, file=None, start=start, end=end)
@@ -45,7 +72,7 @@ class ICalEventsTests(unittest.TestCase):
             response_body=body,
         )
 
-        start = date(2017, 5, 18)
+        start = date(2017, 5, 17)
         end = date(2017, 5, 19)
 
         events = icalevents.events(url=url, file=None, start=start, end=end)
@@ -66,7 +93,7 @@ class ICalEventsTests(unittest.TestCase):
             response_body=body,
         )
 
-        start = date(2017, 5, 18)
+        start = date(2017, 5, 17)
         end = date(2017, 5, 19)
 
         events = icalevents.events(url=url, file=None, start=start, end=end)
@@ -87,7 +114,7 @@ class ICalEventsTests(unittest.TestCase):
             response_body=body,
         )
 
-        start = date(2017, 5, 18)
+        start = date(2017, 5, 17)
         end = date(2017, 5, 19)
 
         events = icalevents.events(url=url, file=None, start=start, end=end)
@@ -115,7 +142,7 @@ class ICalEventsTests(unittest.TestCase):
 
     def test_events(self):
         ical = "test/test_data/basic.ics"
-        start = date(2017, 5, 18)
+        start = date(2017, 5, 17)
         end = date(2017, 5, 19)
 
         evs = icalevents.events(url=None, file=ical, start=start, end=end)
@@ -304,7 +331,7 @@ class ICalEventsTests(unittest.TestCase):
 
     def test_events_async_url(self):
         url = "https://raw.githubusercontent.com/jazzband/icalevents/master/test/test_data/basic.ics"
-        start = date(2017, 5, 18)
+        start = date(2017, 5, 17)
         end = date(2017, 5, 19)
         key = "basic"
 
@@ -317,7 +344,7 @@ class ICalEventsTests(unittest.TestCase):
 
     def test_events_async(self):
         ical = "test/test_data/basic.ics"
-        start = date(2017, 5, 18)
+        start = date(2017, 5, 17)
         end = date(2017, 5, 19)
         key = "basic"
 
@@ -330,7 +357,7 @@ class ICalEventsTests(unittest.TestCase):
 
     def test_request_data(self):
         ical = "test/test_data/basic.ics"
-        start = date(2017, 5, 18)
+        start = date(2017, 5, 17)
         end = date(2017, 5, 19)
         key = "basic"
 
@@ -357,7 +384,7 @@ class ICalEventsTests(unittest.TestCase):
             ("as str", raw_data.decode()),
         ]:
             with self.subTest(stest):
-                start = date(2017, 5, 18)
+                start = date(2017, 5, 17)
                 end = date(2017, 5, 19)
                 key = "basic"
 
