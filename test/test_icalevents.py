@@ -11,6 +11,25 @@ from icalendar.prop import vText
 
 
 class ICalEventsTests(unittest.TestCase):
+    def test_hourly_exdates_preserve_other_occurrences(self):
+        content = """BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:hourly
+DTSTART:20251212T090000Z
+DURATION:PT30M
+RRULE:FREQ=HOURLY;COUNT=6
+EXDATE:20251212T100000Z,20251212T110000Z
+EXDATE:20251212T130000Z
+END:VEVENT
+END:VCALENDAR"""
+        events = icalevents.events(
+            string_content=content,
+            start=datetime(2025, 12, 12, 8, tzinfo=UTC),
+            end=datetime(2025, 12, 12, 15, tzinfo=UTC),
+        )
+        self.assertEqual([event.start.hour for event in events], [9, 12, 14])
+
     @pook.on
     def test_events_url_without_content_type(self):
         url = "https://raw.githubusercontent.com/jazzband/icalevents/master/test/test_data/basic.ics"
