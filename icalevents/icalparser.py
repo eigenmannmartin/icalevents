@@ -441,6 +441,10 @@ def parse_events(
                         found.append(ecopy)
 
             elif e.end >= f and e.start <= t and is_not_exception(e.start):
+                # A DATE-valued DTEND is exclusive. With no end specified,
+                # create_event represents the single occupied day as start == end.
+                if e.all_day and e.start < e.end == f:
+                    continue
                 found.append(e)
 
     result = found.copy()
