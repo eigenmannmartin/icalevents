@@ -13,7 +13,7 @@ from uuid import uuid4
 from dateutil.rrule import rruleset, rrulestr
 from dateutil.tz import UTC, gettz
 from icalendar import Calendar, Timezone
-from icalendar.prop import vDDDLists, vText
+from icalendar.prop import vText
 from pytz import timezone
 
 if version("icalendar") >= "6.0":
@@ -344,32 +344,15 @@ def parse_events(
 
     found: list[Event] = []
 
-    def is_not_exception(date: datetime) -> bool:
-        exdate = "%04d%02d%02d" % (
-            date.year,
-            date.month,
-            date.day,
-        )
-
-        return exdate not in exceptions
-
     for component in calendar.walk():
-        exceptions = {}
-
-        if "EXDATE" in component:
-            # Deal with the fact that sometimes it's a list and
-            # sometimes it's a singleton
-            exlist = []
-            if isinstance(component["EXDATE"], vDDDLists):
-                exlist = component["EXDATE"].dts
-            else:
-                exlist = component["EXDATE"]
-            for ex in exlist:
-                exdate = ex.to_ical().decode("UTF-8")
-                exceptions[exdate[0:8]] = exdate
-
         if component.name == "VEVENT":
             e = create_event(component, strict)
+            exclusions = set()
+            if component.get("exdate"):
+                for excluded in extract_exdates(component):
+                    if e.all_day and isinstance(excluded, datetime):
+                        excluded = excluded.date()
+                    exclusions.add(excluded)
 
             # make rule.between happy and provide from, to points in time that have the same format as dtstart
             if type(e.start) is date and not e.recurring:
@@ -418,7 +401,8 @@ def parse_events(
                 )
 
             if e.recurring:
-                rule = parse_rrule(component)
+                # Match exclusions after correcting each occurrence for DST.
+                rule = parse_rrule(component, include_exdates=False)
                 # We can not use rule.between because the event has to fit in between https://github.com/jazzband/icalevents/issues/101
                 for dt in [
                     dt
@@ -428,19 +412,21 @@ def parse_events(
                     # Recompute the start time in the current timezone *on* the
                     # date of *this* occurrence. This handles the case where the
                     # recurrence has crossed over the daylight savings time boundary.
-                    if is_not_exception(dt):
-                        if type(dt) is datetime and dt.tzinfo:
-                            ecopy = e.copy_to(
-                                dt.replace(tzinfo=get_timezone(str(dt.tzinfo))),
-                                e.uid,
-                            )
-                        else:
-                            ecopy = e.copy_to(
-                                dt.date() if type(e.start) is date else dt, e.uid
-                            )
+                    if type(dt) is datetime and dt.tzinfo:
+                        ecopy = e.copy_to(
+                            dt.replace(tzinfo=get_timezone(str(dt.tzinfo))),
+                            e.uid,
+                        )
+                    else:
+                        ecopy = e.copy_to(
+                            dt.date() if type(e.start) is date else dt, e.uid
+                        )
+                    if ecopy.start not in exclusions:
                         found.append(ecopy)
 
-            elif e.end >= f and e.start <= t and is_not_exception(e.start):
+            elif e.end >= f and e.start <= t:
+                if e.start in exclusions:
+                    continue
                 found.append(e)
 
     result = found.copy()
@@ -525,7 +511,7 @@ def parse_events(
     return result
 
 
-def parse_rrule(component: Component):
+def parse_rrule(component: Component, *, include_exdates: bool = True):
     """
     Extract a dateutil.rrule object from an icalendar component. Also includes
     the component's dtstart and exdate properties. The rdate and exrule
@@ -580,7 +566,7 @@ def parse_rrule(component: Component):
         unfold=True,
     )
 
-    if component.get("exdate"):
+    if include_exdates and component.get("exdate"):
         # Add exdates to the rruleset
         for exd in extract_exdates(component):
             if type(dtstart) is date:
