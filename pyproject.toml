@@ -24,7 +24,7 @@ requires-poetry = ">=2.0"
 [tool.poetry.group.dev.dependencies]
 coverage = "^7.6.10"
 pytest = "^9.0.3"
-black = "^24.10.0"
+black = "^26.10.1"
 flake8 = "^7.1.1"
 pook = "^2.1.3"
 
