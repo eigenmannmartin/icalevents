@@ -15,7 +15,7 @@ dependencies = [
     "icalendar (>=5.0.0)",
     "python-dateutil (~=2.9)",
     "pytz (>=2024.2)",
-    "urllib3 (>=1.26.5)",
+    "urllib3 (>=2.8.0)",
 ]
 
 [tool.poetry]
