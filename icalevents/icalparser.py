@@ -353,6 +353,7 @@ def parse_events(
 
         return exdate not in exceptions
 
+    overrides = set()
     for component in calendar.walk():
         exceptions = {}
 
@@ -370,6 +371,8 @@ def parse_events(
 
         if component.name == "VEVENT":
             e = create_event(component, strict)
+            if e.recurrence_id is not None:
+                overrides.add((e.uid, e.recurrence_id))
 
             # make rule.between happy and provide from, to points in time that have the same format as dtstart
             if type(e.start) is date and not e.recurring:
@@ -443,15 +446,12 @@ def parse_events(
             elif e.end >= f and e.start <= t and is_not_exception(e.start):
                 found.append(e)
 
-    result = found.copy()
-
-    # Remove events that are replaced in ical
-    for event in found:
-        if not event.recurrence_id and (
-            event.uid,
-            event.start,
-        ) in [(f.uid, f.recurrence_id) for f in found]:
-            result.remove(event)
+    # A moved occurrence also replaces its original outside the query window.
+    result = [
+        event
+        for event in found
+        if event.recurrence_id is not None or (event.uid, event.start) not in overrides
+    ]
 
     # > Will be deprecated ========================
     # We will apply default cal_tz as required by some tests.

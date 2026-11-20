@@ -10,6 +10,56 @@ from icalevents import icalevents
 
 
 class ICalEventsTests(unittest.TestCase):
+    def test_moved_override_suppresses_original_outside_query(self):
+        for all_day in (False, True):
+            master = """BEGIN:VEVENT
+UID:moved
+DTSTART{kind}:20260101{clock}
+RRULE:FREQ=DAILY;COUNT=3
+END:VEVENT
+""".format(kind=";VALUE=DATE" if all_day else "", clock="" if all_day else "T100000Z")
+            replacement = """BEGIN:VEVENT
+UID:moved
+RECURRENCE-ID{kind}:20260102{clock}
+DTSTART{kind}:20260109{clock}
+END:VEVENT
+""".format(kind=";VALUE=DATE" if all_day else "", clock="" if all_day else "T100000Z")
+            for components in (master + replacement, replacement + master):
+                for strict in (False, True):
+                    with self.subTest(
+                        all_day=all_day, strict=strict, components=components
+                    ):
+                        content = (
+                            "BEGIN:VCALENDAR\nVERSION:2.0\n"
+                            + components
+                            + "END:VCALENDAR\n"
+                        )
+                        bounds = (
+                            (datetime(2026, 1, 2), datetime(2026, 1, 2, 23, 59))
+                            if all_day
+                            else (
+                                datetime(2026, 1, 2, 9, tzinfo=UTC),
+                                datetime(2026, 1, 2, 11, tzinfo=UTC),
+                            )
+                        )
+                        found = icalevents.events(
+                            string_content=content,
+                            start=bounds[0],
+                            end=bounds[1],
+                            strict=strict,
+                        )
+                        self.assertEqual(found, [])
+                        found = icalevents.events(
+                            string_content=content,
+                            start=date(2026, 1, 1),
+                            end=date(2026, 1, 10),
+                            strict=strict,
+                            sort=True,
+                        )
+                        self.assertEqual(
+                            [event.start.day for event in found], [1, 3, 9]
+                        )
+
     @pook.on
     def test_events_url_without_content_type(self):
         url = "https://raw.githubusercontent.com/jazzband/icalevents/master/test/test_data/basic.ics"
