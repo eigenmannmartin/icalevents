@@ -9,7 +9,6 @@ import urllib3
 from .icalparser import Event, parse_events
 from .icaldownload import ICalDownload
 
-
 # Lock for event data
 event_lock = Lock()
 # Event data
@@ -151,7 +150,7 @@ def request_finished(key: str) -> None:
         threads[key] = threads[key][1:]
 
         if threads[key]:
-            threads[key][0].run()
+            threads[key][0].start()
 
 
 def update_events(key: str, data: list[Event]) -> None:
