@@ -7,7 +7,6 @@ import pytz
 from dateutil.tz import UTC, gettz
 
 from icalevents import icalevents
-from icalendar.prop import vText
 
 
 class ICalEventsTests(unittest.TestCase):
@@ -1074,4 +1073,6 @@ class ICalEventsTests(unittest.TestCase):
         event = evs[0]
 
         self.assertEqual(str(event.component["X-MICROSOFT-CDO-BUSYSTATUS"]), "BUSY")
-        self.assertIsInstance(event.component["X-MICROSOFT-CDO-BUSYSTATUS"], vText)
+        self.assertEqual(
+            event.component["X-MICROSOFT-CDO-BUSYSTATUS"].to_ical(), b"BUSY"
+        )
