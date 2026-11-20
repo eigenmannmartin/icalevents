@@ -19,11 +19,11 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "iCalEvents"
-copyright = "2024, jazzband"
+copyright = "2026, Martin Eigenmann"
 author = "Martin Eigenmann"
 
 # The full version, including alpha/beta/rc tags
-release = "0.3.1"
+release = "0.3.2"
 
 
 # -- General configuration ---------------------------------------------------
