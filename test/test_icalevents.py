@@ -1,4 +1,7 @@
 import unittest
+import subprocess
+import sys
+import textwrap
 from datetime import date, datetime, timedelta
 from time import sleep
 
@@ -10,6 +13,42 @@ from icalevents import icalevents
 
 
 class ICalEventsTests(unittest.TestCase):
+    def test_queued_async_requests_finish(self):
+        # Isolate the worker threads so a lock regression cannot hang the suite.
+        script = textwrap.dedent("""
+            from threading import Event
+            from unittest.mock import patch
+            from icalevents import icalevents
+
+            first_started = Event()
+            release_first = Event()
+            calls = []
+
+            def load(**kwargs):
+                value = kwargs['string_content']
+                calls.append(value)
+                if value == 'first':
+                    first_started.set()
+                    assert release_first.wait(5)
+                return [value]
+
+            with patch.object(icalevents, 'events', side_effect=load):
+                icalevents.events_async('queue', string_content='first')
+                assert first_started.wait(5)
+                icalevents.events_async('queue', string_content='second')
+                icalevents.events_async('queue', string_content='third')
+                with icalevents.event_lock:
+                    workers = list(icalevents.threads['queue'])
+                release_first.set()
+                for worker in workers:
+                    worker.join(5)
+                    assert not worker.is_alive()
+                assert calls == ['first', 'second', 'third']
+                assert icalevents.all_done('queue')
+                assert icalevents.latest_events('queue') == ['third']
+        """)
+        subprocess.run([sys.executable, "-c", script], check=True, timeout=10)
+
     @pook.on
     def test_events_url_without_content_type(self):
         url = "https://raw.githubusercontent.com/jazzband/icalevents/master/test/test_data/basic.ics"
