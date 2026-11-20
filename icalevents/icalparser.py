@@ -263,12 +263,10 @@ def create_event(component: Component, strict: bool) -> Event:
     if component.get("sequence") is not None:
         event.sequence = component.get("sequence")
 
-    if component.get("categories"):
-        categories = component.get("categories").cats
-        encoded_categories = list()
-        for category in categories:
-            encoded_categories.append(encode(category))
-        event.categories = encoded_categories
+    categories = component.get("categories", [])
+    if not isinstance(categories, list):
+        categories = [categories]
+    event.categories = [encode(value) for group in categories for value in group.cats]
 
     if component.get("status"):
         event.status = encode(component.get("status"))
