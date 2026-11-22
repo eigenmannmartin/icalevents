@@ -25,6 +25,14 @@ jobs:
           - "5" # means (>=5.0.0,<6.0.0)
           - "6" # means (>=6.0.0,<7.0.0)
           - "7" # means (>=7.0.0,<8.0.0)
+        dateutil-version:
+          - "2" # means (>=2.0,<3.0)
+          - "3" # means (>=3.0,<4.0)
+          - "4" # means (>=4.0,<5.0)
+        exclude:
+          # python-dateutil 4 requires Python 3.11 or later
+          - python-version: "3.10"
+            dateutil-version: "4"
     steps:
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -39,9 +47,12 @@ jobs:
         with:
           poetry-version: "2.1.2"
 
-      - name: "Install icalendar ${{ matrix.icalendar-version }} and other dependencies"
+      - name: "Install icalendar ${{ matrix.icalendar-version }}, python-dateutil ${{ matrix.dateutil-version }} and other dependencies"
         run: |
           poetry add icalendar~=${{ matrix.icalendar-version }}.0 --no-interaction
+          # Installed with pip: dateutil 4 needs Python 3.11+, which the
+          # project-wide resolution of `poetry add` (Python 3.10+) rejects.
+          poetry run pip install "python-dateutil~=${{ matrix.dateutil-version }}.0"
 
       - name: "Test with pytest"
         run: |
