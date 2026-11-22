@@ -13,7 +13,7 @@ requires-python = ">=3.10"
 
 dependencies = [
     "icalendar (>=5.0.0)",
-    "python-dateutil (~=2.9)",
+    "python-dateutil (>=2.9,<5)",
     "pytz (>=2024.2)",
     "urllib3 (>=2.8.0)",
 ]
